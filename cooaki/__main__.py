@@ -90,14 +90,15 @@ async def main() -> int:
                     input(
                         f"I guess: {resp.name_proposition} - {resp.description_proposition}\n"
                         f"Photo URL: {resp.photo} (From: {resp.pseudo})\n"
-                        f"Continue? (y/N)",
+                        f"Continue? (y/N) ",
                     ).lower()
                     or "n"
                 ) == "y"
-                if should_continue:
-                    await aki.continue_answer()
-                    continue
-                break
+                if not should_continue:
+                    break
+                print()
+                await aki.continue_answer()
+                continue
 
         elif msg == "b":
             try:

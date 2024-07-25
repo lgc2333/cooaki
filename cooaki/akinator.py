@@ -25,17 +25,20 @@ class GameState:
     ended: bool = False
 
 
-class AnswerResp(BaseModel):
+class ExcludeResp(BaseModel):
     akitude: str
     step: int
     progression: float
     question_id: int
     question: str
-    completion: Optional[str] = None
 
     @property
     def akitude_url(self) -> str:
         return Akinator.get_akitude_url(self.akitude)
+
+
+class AnswerResp(ExcludeResp):
+    completion: str
 
 
 class WinResp(BaseModel):
@@ -123,7 +126,7 @@ class Akinator:
             "signature": state.signature,
         }
 
-    def handle_answer_resp(self, resp: AnswerResp):
+    def handle_answer_resp(self, resp: ExcludeResp):
         state = self.state
         if state.win:
             state.win = False
@@ -222,7 +225,7 @@ class Akinator:
         async with self.create_client() as cli:
             resp_text = ((await cli.post(url, data=data)).raise_for_status()).text
 
-        self.handle_answer_resp(resp := type_validate_json(AnswerResp, resp_text))
+        self.handle_answer_resp(resp := type_validate_json(ExcludeResp, resp_text))
         return resp
 
     async def back(self):
