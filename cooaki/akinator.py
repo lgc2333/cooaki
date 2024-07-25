@@ -26,12 +26,12 @@ class GameState:
 
 
 class AnswerResp(BaseModel):
-    completion: str
     akitude: str
     step: int
     progression: float
     question_id: int
     question: str
+    completion: Optional[str] = None
 
     @property
     def akitude_url(self) -> str:
