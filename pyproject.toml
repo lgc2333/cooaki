@@ -1,0 +1,23 @@
+[project]
+name = "cooaki"
+dynamic = ["version"]
+description = "Akinator API wrapper"
+authors = [{ name = "student_2333", email = "lgc2333@126.com" }]
+dependencies = []
+requires-python = ">=3.9,<4.0"
+readme = "README.md"
+license = { text = "MIT" }
+
+[project.urls]
+homepage = "https://github.com/lgc2333/cooaki"
+
+[tool.pdm.build]
+includes = []
+
+[tool.pdm.version]
+source = "file"
+path = "cooaki/__init__.py"
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
