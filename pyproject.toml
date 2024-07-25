@@ -3,7 +3,7 @@ name = "cooaki"
 dynamic = ["version"]
 description = "Akinator API wrapper"
 authors = [{ name = "student_2333", email = "lgc2333@126.com" }]
-dependencies = []
+dependencies = ["httpx>=0.27.0", "cookit[pyd]>=0.6.7"]
 requires-python = ">=3.9,<4.0"
 readme = "README.md"
 license = { text = "MIT" }
