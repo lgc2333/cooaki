@@ -7,8 +7,8 @@ from cookit.pyd import type_validate_json
 from httpx import AsyncClient, Cookies
 from pydantic import BaseModel, ValidationError
 
-from .const import HEADERS, THEMES, Answer, ThemeID
-from .errors import GameEndedError
+from .const import HEADERS, THEMES, Answer, Theme
+from .errors import CanNotGoBackError, GameEndedError
 
 
 @dataclass
@@ -55,7 +55,7 @@ class Akinator:
     def __init__(
         self,
         lang: str = "cn",
-        theme: Optional[ThemeID] = None,
+        theme: Optional[Theme] = None,
         child_mode: bool = False,
         **cli_kwargs,
     ) -> None:
@@ -68,13 +68,13 @@ class Akinator:
             raise ValueError(f"Unsupported theme: {theme}")
 
         self.lang: str = lang
-        self.theme: ThemeID = theme
+        self.theme: Theme = theme
         self.child_mode: bool = child_mode
 
         self._state: Optional[GameState] = None
 
         self.cli_kwargs: Dict[str, Any] = cli_kwargs
-        self.cookies: Cookies = Cookies()
+        self.cookies: Optional[Cookies] = None
 
     @property
     def state(self) -> GameState:
@@ -112,38 +112,12 @@ class Akinator:
                 .content
             )
 
-    async def start(self):
-        url = "/game"
-        data = {"sid": self.theme, "cm": self.child_mode}
-        async with self.create_client() as cli:
-            resp_text = (await cli.post(url, data=data)).raise_for_status().text
-
-        session, signature = cast(
-            List[str],
-            re.findall(r"[a-zA-Z0-9+/]+==", resp_text),
-        )[-2:]
-
-        question_match = re.search(
-            (
-                r'<div class="bubble-body"><p class="question-text" id="question-label">'
-                r"(?P<question>.+?)"
-                r"</p></div>"
-            ),
-            resp_text,
-        )
-        if not question_match:
-            raise ValueError("Failed to find question")
-        question: str = question_match["question"]
-
-        self._state = GameState(session, signature, question)
-        return self._state
-
     def make_answer_req_data(self):
         state = self.state
         return {
             "step": state.step,
             "progression": state.progression,
-            "sid": self.theme,
+            "sid": self.theme.value,
             "cm": self.child_mode,
             "session": state.session,
             "signature": state.signature,
@@ -183,6 +157,38 @@ class Akinator:
         if not state.win:
             raise RuntimeError("Game not win")
 
+    def ensure_can_back(self):
+        state = self.state
+        self.ensure_not_win()
+        if state.step <= 0:
+            raise CanNotGoBackError
+
+    async def start(self):
+        url = "/game"
+        data = {"sid": self.theme.value, "cm": self.child_mode}
+        async with self.create_client() as cli:
+            resp_text = (await cli.post(url, data=data)).raise_for_status().text
+
+        session, signature = cast(
+            List[str],
+            re.findall(r"[a-zA-Z0-9+/]+==", resp_text),
+        )[-2:]
+
+        question_match = re.search(
+            (
+                r'<div class="bubble-body"><p class="question-text" id="question-label">'
+                r"(?P<question>.+?)"
+                r"</p></div>"
+            ),
+            resp_text,
+        )
+        if not question_match:
+            raise ValueError("Failed to find question")
+        question: str = question_match["question"]
+
+        self._state = GameState(session, signature, question)
+        return self._state
+
     async def answer(self, answer: Answer):
         state = self.state
         self.ensure_not_win()
@@ -190,7 +196,7 @@ class Akinator:
         url = "/answer"
         data = {
             **self.make_answer_req_data(),
-            "answer": answer,
+            "answer": answer.value,
             "step_last_proposition": (x if (x := state.step_last_proposition) else ""),
         }
         async with self.create_client() as cli:
@@ -220,7 +226,7 @@ class Akinator:
         return resp
 
     async def back(self):
-        self.ensure_not_win()
+        self.ensure_can_back()
 
         url = "/cancel_answer"
         data = self.make_answer_req_data()

@@ -4,7 +4,7 @@ from .akinator import (
     GameState as GameState,
     WinResp as WinResp,
 )
-from .const import THEMES as THEMES, Answer as Answer, ThemeID as ThemeID
+from .const import THEMES as THEMES, Answer as Answer, Theme as Theme
 from .errors import (
     CanNotGoBackError as CanNotGoBackError,
     GameEndedError as GameEndedError,
