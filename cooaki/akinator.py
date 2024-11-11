@@ -169,7 +169,7 @@ class Akinator:
         async with self.create_client() as cli:
             resp_text = (await cli.post(url, data=data)).raise_for_status().text
 
-        input_reg = r'name="{}"\s+id="{}"\s+value="(?P<value>.+?)"'
+        input_reg = r'name="{0}"\s+id="{0}"\s+value="(?P<value>.+?)"'
 
         if not (session_m := re.search(input_reg.format("session"), resp_text)):
             raise ValueError("Failed to find session")
