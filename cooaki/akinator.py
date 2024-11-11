@@ -169,10 +169,15 @@ class Akinator:
         async with self.create_client() as cli:
             resp_text = (await cli.post(url, data=data)).raise_for_status().text
 
-        session, signature = cast(
-            List[str],
-            re.findall(r"[a-zA-Z0-9+/]+==", resp_text),
-        )[-2:]
+        session_match = re.search(r'name="session"\s+id="session"\s+value="([^"]+)"', resp_text)
+        if not session_match:
+            raise ValueError("Failed to find session")
+        session = session_match.group(1)
+
+        signature_match = re.search(r'name="signature"\s+id="signature"\s+value="([^"]+)"', resp_text)
+        if not signature_match:
+            raise ValueError("Failed to find signature")
+        signature = signature_match.group(1)
 
         question_match = re.search(
             (
