@@ -57,7 +57,7 @@ async def main() -> int:
     print(f"Child mode {'enabled' if child_mode else 'disabled'}")
     print()
 
-    aki = Akinator(lang, theme, child_mode)
+    aki = Akinator(lang, theme, child_mode, timeout=15)
     await aki.start()
 
     while not aki.state.ended:

@@ -10,4 +10,4 @@ from .errors import (
     GameEndedError as GameEndedError,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"

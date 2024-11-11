@@ -67,4 +67,10 @@ Thanks for your support! Your support will make me continue to create contents!
 
 ## 📝 更新日志 / Update Log
 
-芝士刚刚发布的插件，还没有更新日志的说 qwq~
+### 0.2.1
+
+- 修复 [#1](https://github.com/lgc2333/cooaki/issues/1)
+
+### 0.2.0
+
+- 返回 Model 重构
