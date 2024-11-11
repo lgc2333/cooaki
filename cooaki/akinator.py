@@ -1,7 +1,7 @@
 import re
 from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, Optional
 
 from cookit.pyd import type_validate_json
 from httpx import AsyncClient, Cookies
@@ -169,10 +169,15 @@ class Akinator:
         async with self.create_client() as cli:
             resp_text = (await cli.post(url, data=data)).raise_for_status().text
 
-        session, signature = cast(
-            List[str],
-            re.findall(r"[a-zA-Z0-9+/]+==", resp_text),
-        )[-2:]
+        input_reg = r'name="{0}"\s+id="{0}"\s+value="(?P<value>.+?)"'
+
+        if not (session_m := re.search(input_reg.format("session"), resp_text)):
+            raise ValueError("Failed to find session")
+        session: str = session_m["value"]
+
+        if not (signature_m := re.search(input_reg.format("signature"), resp_text)):
+            raise ValueError("Failed to find signature")
+        signature: str = signature_m["value"]
 
         question_match = re.search(
             (
