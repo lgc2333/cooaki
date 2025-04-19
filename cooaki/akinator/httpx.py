@@ -104,7 +104,7 @@ class HTTPXAkinator(BaseAkinator):
     @override
     async def goto_start_page(self) -> str:
         data = {"sid": self.theme.value, "cm": self.child_mode}
-        async with self.create_client() as cli:
+        async with self.create_client(PAGE_EXTRA_HEADERS) as cli:
             resp = await cli.post(f"{self.base_url}/game", data=data)
             resp.raise_for_status()
             return resp.text
