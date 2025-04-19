@@ -36,6 +36,13 @@ _✨ Another Async Akinator API Wrapper ✨_
 pip install cooaki
 ```
 
+如需使用 `patchright` 过 Cloudflare 检测，请使用下面命令安装
+If you need to use `patchright` to bypass Cloudflare detection, please use the following command to install
+
+```shell
+pip install cooaki[patchright]
+```
+
 ## 📖 介绍 / Description
 
 参见 [cooaki/\_\_main\_\_.py](https://github.com/lgc2333/cooaki/blob/master/cooaki/__main__.py)  
@@ -67,10 +74,21 @@ Thanks for your support! Your support will make me continue to create contents!
 
 ## 📝 更新日志 / Update Log
 
+### 0.3.0
+
+- 重构代码，主要针对绕过 Cloudflare  
+  Refactor the code, mainly for bypassing Cloudflare
+  - 支持使用 `playwright` 或 `patchright` 来请求  
+    Support using `playwright` or `patchright` to request
+  - 支持自定义 `base_url`  
+    Support custom `base_url`
+
 ### 0.2.1
 
-- 修复 [#1](https://github.com/lgc2333/cooaki/issues/1)
+- 修复 [#1](https://github.com/lgc2333/cooaki/issues/1)  
+  Fix [#1](https://github.com/lgc2333/cooaki/issues/1)
 
 ### 0.2.0
 
-- 返回 Model 重构
+- 返回 Model 重构  
+  Refactor return model

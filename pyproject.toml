@@ -3,13 +3,16 @@ name = "cooaki"
 dynamic = ["version"]
 description = "Another Async Akinator API Wrapper"
 authors = [{ name = "LgCookie", email = "lgc2333@126.com" }]
-dependencies = ["httpx>=0.27.2", "cookit[pyd]>=0.9.3"]
+dependencies = ["httpx>=0.27.2", "cookit[pyd]>=0.11.0"]
 requires-python = ">=3.9,<4.0"
 readme = "README.md"
 license = { text = "MIT" }
 
 [project.urls]
 homepage = "https://github.com/lgc2333/cooaki"
+
+[dependency-groups]
+patchright = ["patchright>=1.51.3"]
 
 [tool.pdm.build]
 includes = []

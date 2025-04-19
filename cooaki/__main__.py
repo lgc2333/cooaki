@@ -1,17 +1,96 @@
 import asyncio
 import sys
-from contextlib import suppress
+from contextlib import asynccontextmanager, suppress
+from importlib.util import find_spec
+from typing import TYPE_CHECKING, cast
 
 from . import (
     THEMES,
-    Akinator,
     Answer,
+    BaseAkinator,
     CanNotGoBackError,
     GameEndedError,
+    HTTPXAkinator,
+    PlaywrightAkinator,
     Theme,
     WinResp,
     __version__,
 )
+
+if TYPE_CHECKING:
+    from playwright.async_api import Browser, Page, Playwright
+
+
+@asynccontextmanager
+async def use_akinator(**kwargs):
+    if (pr := find_spec("patchright")) or find_spec("playwright"):
+        if pr:
+            from patchright.async_api import async_playwright
+        else:
+            from playwright.async_api import async_playwright
+
+        playwright = None
+        browser = None
+        page = None
+        try:
+            playwright = cast("Playwright", await async_playwright().start())
+            browser = cast("Browser", await playwright.chromium.launch(headless=True))
+            page = cast("Page", await browser.new_page())
+            yield PlaywrightAkinator(page, **kwargs)
+        finally:
+            if page:
+                await page.close()
+            if browser:
+                await browser.close()
+            if playwright:
+                await playwright.stop()
+
+    else:
+        yield HTTPXAkinator(**kwargs)
+
+
+async def handle_input(aki: BaseAkinator, msg: str):
+    if msg.isdigit():
+        try:
+            answer = Answer(int(msg) - 1)
+        except Exception:
+            print("Invalid answer")
+            return False
+
+        try:
+            resp = await aki.answer(answer)
+        except GameEndedError:
+            print("You beat me!")
+            return True
+
+        if isinstance(resp, WinResp):
+            should_continue = (
+                input(
+                    f"I guess: {resp.name_proposition} - {resp.description_proposition}\n"
+                    f"Photo URL: {resp.photo} (From: {resp.pseudo})\n"
+                    f"Continue? (y/N) ",
+                ).lower()
+                or "n"
+            ) == "y"
+            if not should_continue:
+                return True
+
+            print()
+            await aki.continue_answer()
+            return False
+
+    elif msg == "b":
+        try:
+            await aki.back()
+        except CanNotGoBackError:
+            print("Cant go back any further!")
+            print()
+
+    else:
+        print("Invalid answer")
+        print()
+
+    return False
 
 
 async def main() -> int:
@@ -57,59 +136,28 @@ async def main() -> int:
     print(f"Child mode {'enabled' if child_mode else 'disabled'}")
     print()
 
-    aki = Akinator(lang, theme, child_mode, timeout=15)
-    await aki.start()
+    async with use_akinator(
+        lang=lang,
+        theme=theme,
+        child_mode=child_mode,
+        timeout=15,
+    ) as aki:
+        await aki.start()
 
-    while not aki.state.ended:
-        answer_tip = ", ".join(
-            f"{x + 1} ({x.name.capitalize().replace('_', ' ')})" for x in Answer
-        )
+        while not aki.state.ended:
+            answer_tip = ", ".join(
+                f"{x + 1} ({x.name.capitalize().replace('_', ' ')})" for x in Answer
+            )
 
-        msg = input(
-            f"{aki.state.step + 1}: {aki.state.question}\n"
-            f"Answer: {answer_tip}, B (Back), Ctrl-C (Quit)\n"
-            f"Input answer: ",
-        ).lower()
-        print()
-
-        if msg.isdigit():
-            try:
-                answer = Answer(int(msg) - 1)
-            except Exception:
-                print("Invalid answer")
-                continue
-
-            try:
-                resp = await aki.answer(answer)
-            except GameEndedError:
-                print("You beat me!")
-                break
-
-            if isinstance(resp, WinResp):
-                should_continue = (
-                    input(
-                        f"I guess: {resp.name_proposition} - {resp.description_proposition}\n"
-                        f"Photo URL: {resp.photo} (From: {resp.pseudo})\n"
-                        f"Continue? (y/N) ",
-                    ).lower()
-                    or "n"
-                ) == "y"
-                if not should_continue:
-                    break
-                print()
-                await aki.continue_answer()
-                continue
-
-        elif msg == "b":
-            try:
-                await aki.back()
-            except CanNotGoBackError:
-                print("Cant go back any further!")
-                print()
-
-        else:
-            print("Invalid answer")
+            msg = input(
+                f"{aki.state.step + 1}: {aki.state.question}\n"
+                f"Answer: {answer_tip}, B (Back), Ctrl-C (Quit)\n"
+                f"Input answer: ",
+            ).lower()
             print()
+
+            if await handle_input(aki, msg):
+                break
 
     return 0
 

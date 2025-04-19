@@ -1,14 +1,16 @@
 import re
-from contextlib import asynccontextmanager, suppress
+from abc import abstractmethod
+from contextlib import suppress
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from cookit.pyd import type_validate_json
-from httpx import AsyncClient, Cookies
 from pydantic import BaseModel, ValidationError
 
-from .const import HEADERS, THEMES, Answer, Theme
-from .errors import CanNotGoBackError, GameEndedError
+from ..const import DEFAULT_TIMEOUT, DEFAULT_URL_TEMPLATE, THEMES, Answer, Theme
+from ..errors import CanNotGoBackError, GameEndedError
+
+GAME_REFERRER_PATH = "game"
 
 
 @dataclass
@@ -33,10 +35,6 @@ class AnswerResp(BaseModel):
     question: str
     completion: Optional[str] = None
 
-    @property
-    def akitude_url(self) -> str:
-        return Akinator.get_akitude_url(self.akitude)
-
 
 class WinResp(BaseModel):
     completion: str
@@ -51,30 +49,34 @@ class WinResp(BaseModel):
     nb_elements: int
 
 
-class Akinator:
+class BaseAkinator:
     def __init__(
         self,
         lang: str = "cn",
         theme: Optional[Theme] = None,
         child_mode: bool = False,
-        **cli_kwargs,
+        base_url_template: str = DEFAULT_URL_TEMPLATE,
+        allow_not_supported_lang: bool = False,
+        allow_not_supported_theme: bool = False,
+        timeout: int = DEFAULT_TIMEOUT,
     ) -> None:
-        if lang not in THEMES:
+        if (not allow_not_supported_lang) and (lang not in THEMES):
             raise ValueError(f"Unsupported language: {lang}")
 
         if not theme:
-            theme = THEMES[lang][0]
-        elif theme not in THEMES[lang]:
+            theme = Theme.CHARACTERS
+        if (not allow_not_supported_theme) and (
+            (lang not in THEMES) or (theme not in THEMES[lang])
+        ):
             raise ValueError(f"Unsupported theme: {theme}")
 
         self.lang: str = lang
         self.theme: Theme = theme
         self.child_mode: bool = child_mode
+        self.base_url_template: str = base_url_template.rstrip("/")
+        self.timeout: int = timeout
 
         self._state: Optional[GameState] = None
-
-        self.cli_kwargs: Dict[str, Any] = cli_kwargs
-        self.cookies: Optional[Cookies] = None
 
     @property
     def state(self) -> GameState:
@@ -84,33 +86,17 @@ class Akinator:
 
     @property
     def base_url(self) -> str:
-        return f"https://{self.lang}.akinator.com"
-
-    @asynccontextmanager
-    async def create_client(self):
-        async with AsyncClient(  # noqa: S113
-            base_url=self.base_url,
-            headers=HEADERS,
-            follow_redirects=True,
-            cookies=self.cookies,
-            **self.cli_kwargs,
-        ) as cli:
-            try:
-                yield cli
-            finally:
-                self.cookies = cli.cookies
+        return self.base_url_template.format(self.lang)
 
     @staticmethod
-    def get_akitude_url(akitude: str) -> str:
-        return f"https://cn.akinator.com/assets/img/akitudes_670x1096/{akitude}"
+    def get_akitude_path(akitude: str) -> str:
+        return f"assets/img/akitudes_670x1096/{akitude}"
+
+    def get_akitude_url(self, akitude: str) -> str:
+        return f"{self.base_url}/{self.get_akitude_path(akitude)}"
 
     async def get_akitude_image(self, akitude: str) -> bytes:
-        async with self.create_client() as cli:
-            return (
-                (await cli.get(self.get_akitude_url(akitude)))
-                .raise_for_status()
-                .content
-            )
+        return await self.do_request("GET", self.get_akitude_url(akitude))
 
     def make_answer_req_data(self):
         state = self.state
@@ -163,49 +149,82 @@ class Akinator:
         if state.step <= 0:
             raise CanNotGoBackError
 
-    async def start(self):
-        url = "/game"
-        data = {"sid": self.theme.value, "cm": self.child_mode}
-        async with self.create_client() as cli:
-            resp_text = (await cli.post(url, data=data)).raise_for_status().text
-
+    def find_form_input_value(self, name: str, resp_text: str) -> str:
         input_reg = r'name="{0}"\s+id="{0}"\s+value="(?P<value>.+?)"'
+        if not (m := re.search(input_reg.format(name), resp_text)):
+            raise ValueError(f"Failed to find {name}")
+        return m["value"]
 
-        if not (session_m := re.search(input_reg.format("session"), resp_text)):
-            raise ValueError("Failed to find session")
-        session: str = session_m["value"]
-
-        if not (signature_m := re.search(input_reg.format("signature"), resp_text)):
-            raise ValueError("Failed to find signature")
-        signature: str = signature_m["value"]
-
+    def find_question(self, resp_text: str) -> str:
         question_match = re.search(
-            (
-                r'<div class="bubble-body"><p class="question-text" id="question-label">'
-                r"(?P<question>.+?)"
-                r"</p></div>"
-            ),
+            r'<div class="bubble-body"><p class="question-text" id="question-label">'
+            r"(?P<question>.+?)"
+            r"</p></div>",
             resp_text,
         )
         if not question_match:
             raise ValueError("Failed to find question")
-        question: str = question_match["question"]
+        return question_match["question"]
 
-        self._state = GameState(session, signature, question)
+    def make_referrer_headers(self, referrer_path: str = "") -> dict[str, str]:
+        return {
+            "origin": self.base_url,
+            "referer": f"{self.base_url}/{referrer_path}",
+        }
+
+    @abstractmethod
+    async def do_request(
+        self,
+        method: str,
+        url: str,
+        data: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, str]] = None,
+    ) -> bytes: ...
+
+    async def request(
+        self,
+        method: str,
+        path: str,
+        data: Optional[dict[str, Any]] = None,
+        referrer_path: Optional[str] = "",
+    ) -> bytes:
+        headers = {}
+        if referrer_path:
+            headers.update(self.make_referrer_headers(referrer_path))
+        return await self.do_request(
+            method,
+            f"{self.base_url}/{path}",
+            data=data,
+            headers=headers,
+        )
+
+    @abstractmethod
+    async def goto_start_page(self) -> str: ...
+
+    async def start(self):
+        resp_text = await self.goto_start_page()
+        self._state = GameState(
+            self.find_form_input_value("session", resp_text),
+            self.find_form_input_value("signature", resp_text),
+            self.find_question(resp_text),
+        )
         return self._state
 
     async def answer(self, answer: Answer):
         state = self.state
         self.ensure_not_win()
 
-        url = "/answer"
         data = {
             **self.make_answer_req_data(),
             "answer": answer.value,
             "step_last_proposition": (x if (x := state.step_last_proposition) else ""),
         }
-        async with self.create_client() as cli:
-            resp_text = ((await cli.post(url, data=data)).raise_for_status()).text
+        resp_text = await self.request(
+            "POST",
+            "answer",
+            data=data,
+            referrer_path="game",
+        )
 
         with suppress(ValidationError):
             self.handle_answer_resp(resp := type_validate_json(AnswerResp, resp_text))
@@ -222,21 +241,25 @@ class Akinator:
     async def continue_answer(self):
         self.ensure_win()
 
-        url = "/exclude"
         data = self.make_answer_req_data()
-        async with self.create_client() as cli:
-            resp_text = ((await cli.post(url, data=data)).raise_for_status()).text
-
+        resp_text = await self.request(
+            "POST",
+            "exclude",
+            data=data,
+            referrer_path="game",
+        )
         self.handle_answer_resp(resp := type_validate_json(AnswerResp, resp_text))
         return resp
 
     async def back(self):
         self.ensure_can_back()
 
-        url = "/cancel_answer"
         data = self.make_answer_req_data()
-        async with self.create_client() as cli:
-            resp_text = ((await cli.post(url, data=data)).raise_for_status()).text
-
+        resp_text = await self.request(
+            "POST",
+            "cancel_answer",
+            data=data,
+            referrer_path="game",
+        )
         self.handle_answer_resp(resp := type_validate_json(AnswerResp, resp_text))
         return resp

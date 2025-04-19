@@ -1,7 +1,9 @@
 from .akinator import (
-    Akinator as Akinator,
     AnswerResp as AnswerResp,
+    BaseAkinator as BaseAkinator,
     GameState as GameState,
+    HTTPXAkinator as HTTPXAkinator,
+    PlaywrightAkinator as PlaywrightAkinator,
     WinResp as WinResp,
 )
 from .const import THEMES as THEMES, Answer as Answer, Theme as Theme
@@ -10,4 +12,6 @@ from .errors import (
     GameEndedError as GameEndedError,
 )
 
-__version__ = "0.2.1"
+Akinator = HTTPXAkinator
+
+__version__ = "0.3.0"
