@@ -34,7 +34,8 @@ async def use_akinator(**kwargs):
         page = None
         try:
             playwright = cast("Playwright", await async_playwright().start())
-            browser = cast("Browser", await playwright.chromium.launch(headless=True))
+            # must disable headless mode for bypassing
+            browser = cast("Browser", await playwright.chromium.launch(headless=False))
             page = cast("Page", await browser.new_page())
             yield PlaywrightAkinator(page, **kwargs)
         finally:

@@ -56,7 +56,7 @@ class HTTPXAkinator(BaseAkinator):
         base_url_template: str = DEFAULT_URL_TEMPLATE,
         allow_not_supported_lang: bool = False,
         allow_not_supported_theme: bool = False,
-        timeout: int = DEFAULT_TIMEOUT,
+        timeout: float = DEFAULT_TIMEOUT,
         **kwargs,
     ) -> None:
         super().__init__(
@@ -81,6 +81,7 @@ class HTTPXAkinator(BaseAkinator):
             headers=headers,
             follow_redirects=True,
             cookies=self.cookies,
+            timeout=self.timeout,
             **self.cli_kwargs,
         ) as cli:
             try:

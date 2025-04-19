@@ -23,9 +23,10 @@ async () => {
     for (const [k, v] of Object.entries({data})) {
         form.append(k, v)
     }
+    const method = '{method}'
     const resp = await fetch('{url}', {
-        method: '{method}',
-        body: form,
+        method,
+        body: ['GET', 'HEAD'].includes(method) ? undefined : form,
         headers: {headers},
     })
     const buf = new Uint8Array(await resp.arrayBuffer())
@@ -57,7 +58,7 @@ class PlaywrightAkinator(BaseAkinator):
         base_url_template: str = DEFAULT_URL_TEMPLATE,
         allow_not_supported_lang: bool = False,
         allow_not_supported_theme: bool = False,
-        timeout: int = DEFAULT_TIMEOUT,
+        timeout: float = DEFAULT_TIMEOUT,
     ) -> None:
         super().__init__(
             lang=lang,

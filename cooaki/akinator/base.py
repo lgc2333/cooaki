@@ -58,7 +58,7 @@ class BaseAkinator:
         base_url_template: str = DEFAULT_URL_TEMPLATE,
         allow_not_supported_lang: bool = False,
         allow_not_supported_theme: bool = False,
-        timeout: int = DEFAULT_TIMEOUT,
+        timeout: float = DEFAULT_TIMEOUT,
     ) -> None:
         if (not allow_not_supported_lang) and (lang not in THEMES):
             raise ValueError(f"Unsupported language: {lang}")
@@ -74,7 +74,7 @@ class BaseAkinator:
         self.theme: Theme = theme
         self.child_mode: bool = child_mode
         self.base_url_template: str = base_url_template.rstrip("/")
-        self.timeout: int = timeout
+        self.timeout: float = timeout
 
         self._state: Optional[GameState] = None
 
