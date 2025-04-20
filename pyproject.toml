@@ -11,8 +11,11 @@ license = { text = "MIT" }
 [project.urls]
 homepage = "https://github.com/lgc2333/cooaki"
 
-[dependency-groups]
+[project.optional-dependencies]
 patchright = ["patchright>=1.51.3"]
+
+[dependency-groups]
+dev = []
 
 [tool.pdm.build]
 includes = []
