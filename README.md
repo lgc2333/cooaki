@@ -8,7 +8,7 @@ _Logo 征集中 / Logo currently soliciting opinion_
 
 _✨ Another Async Akinator API Wrapper ✨_
 
-<img src="https://img.shields.io/badge/python-3.9+-blue.svg" alt="python">
+<img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="python">
 <a href="https://pdm.fming.dev">
   <img src="https://img.shields.io/badge/pdm-managed-blueviolet" alt="pdm-managed">
 </a>
