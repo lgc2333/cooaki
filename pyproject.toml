@@ -13,17 +13,14 @@ homepage = "https://github.com/lgc2333/cooaki"
 
 [project.optional-dependencies]
 patchright = ["patchright>=1.51.3"]
+all = ["cooaki[patchright]"]
 
 [dependency-groups]
 dev = []
 
-[tool.pdm.build]
-includes = []
-
-[tool.pdm.version]
-source = "file"
-path = "cooaki/__init__.py"
-
 [build-system]
-requires = ["pdm-backend"]
-build-backend = "pdm.backend"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "cooaki/__init__.py"
