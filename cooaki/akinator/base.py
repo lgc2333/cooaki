@@ -2,7 +2,7 @@ import re
 from abc import abstractmethod
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from cookit.pyd import type_validate_json
 from pydantic import BaseModel, ValidationError
@@ -23,7 +23,7 @@ class GameState:
     progression: float = 0.0
     step: int = 0
     win: bool = False
-    step_last_proposition: Optional[int] = None
+    step_last_proposition: int | None = None
     ended: bool = False
 
 
@@ -33,7 +33,7 @@ class AnswerResp(BaseModel):
     progression: float
     question_id: int
     question: str
-    completion: Optional[str] = None
+    completion: str | None = None
 
 
 class WinResp(BaseModel):
@@ -53,7 +53,7 @@ class BaseAkinator:
     def __init__(
         self,
         lang: str = "cn",
-        theme: Optional[Theme] = None,
+        theme: Theme | None = None,
         child_mode: bool = False,
         base_url_template: str = DEFAULT_URL_TEMPLATE,
         allow_not_supported_lang: bool = False,
@@ -76,7 +76,7 @@ class BaseAkinator:
         self.base_url_template: str = base_url_template.rstrip("/")
         self.timeout: float = timeout
 
-        self._state: Optional[GameState] = None
+        self._state: GameState | None = None
 
     @property
     def state(self) -> GameState:
@@ -177,16 +177,16 @@ class BaseAkinator:
         self,
         method: str,
         url: str,
-        data: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, str]] = None,
+        data: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> bytes: ...
 
     async def request(
         self,
         method: str,
         path: str,
-        data: Optional[dict[str, Any]] = None,
-        referrer_path: Optional[str] = "",
+        data: dict[str, Any] | None = None,
+        referrer_path: str | None = "",
     ) -> bytes:
         headers = {}
         if referrer_path:

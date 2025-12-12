@@ -1,7 +1,7 @@
 import base64
 import json
 import re
-from typing import TYPE_CHECKING, Any, Optional, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 from typing_extensions import override
 
 from ..const import DEFAULT_TIMEOUT, DEFAULT_URL_TEMPLATE, Theme
@@ -53,7 +53,7 @@ class PlaywrightAkinator(BaseAkinator):
         self,
         page: "Page",
         lang: str = "cn",
-        theme: Optional[Theme] = None,
+        theme: Theme | None = None,
         child_mode: bool = False,
         base_url_template: str = DEFAULT_URL_TEMPLATE,
         allow_not_supported_lang: bool = False,
@@ -76,8 +76,8 @@ class PlaywrightAkinator(BaseAkinator):
         self,
         method: str,
         url: str,
-        data: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, str]] = None,
+        data: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> bytes:
         js = format_template(
             REQUEST_JS_TEMPLATE,

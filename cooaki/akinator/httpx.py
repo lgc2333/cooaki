@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 from typing_extensions import override
 
 from httpx import AsyncClient
@@ -51,7 +51,7 @@ class HTTPXAkinator(BaseAkinator):
     def __init__(
         self,
         lang: str = "cn",
-        theme: Optional[Theme] = None,
+        theme: Theme | None = None,
         child_mode: bool = False,
         base_url_template: str = DEFAULT_URL_TEMPLATE,
         allow_not_supported_lang: bool = False,
@@ -68,11 +68,11 @@ class HTTPXAkinator(BaseAkinator):
             allow_not_supported_theme=allow_not_supported_theme,
             timeout=timeout,
         )
-        self.cookies: Optional[Cookies] = None
+        self.cookies: Cookies | None = None
         self.cli_kwargs: dict[str, Any] = kwargs
 
     @asynccontextmanager
-    async def create_client(self, *extra_headers: Optional[dict[str, str]]):
+    async def create_client(self, *extra_headers: dict[str, str] | None):
         headers = {**HEADERS}
         for extra in extra_headers:
             if extra:
@@ -94,8 +94,8 @@ class HTTPXAkinator(BaseAkinator):
         self,
         method: str,
         url: str,
-        data: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, str]] = None,
+        data: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> bytes:
         async with self.create_client(XHR_EXTRA_HEADERS, headers) as cli:
             resp = await cli.request(method, url, data=data)
